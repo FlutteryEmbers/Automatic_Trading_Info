@@ -1,0 +1,6 @@
+# Terraform variables
+environment = "dev"
+region = "us-east-1"
+from_email = "your-email@example.com"
+to_email = "recipient@example.com"
+schedule_expression = "cron(0 9,15 * * MON-FRI)"

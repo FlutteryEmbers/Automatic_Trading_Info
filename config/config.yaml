@@ -1,0 +1,43 @@
+# 股票监控配置
+analysis:
+  # 技术指标参数
+  momentum:
+    rsi_period: 14
+    macd_fast: 12
+    macd_slow: 26
+    macd_signal: 9
+    sma_short: 20
+    sma_long: 50
+    bb_period: 20
+    bb_std: 2
+  
+  # 相关性分析参数
+  correlation:
+    lookback_period: 60  # 天数
+    min_correlation: 0.5
+    
+  # 数据获取参数
+  data:
+    period: "6mo"  # 数据周期
+    interval: "1d"  # 数据间隔
+
+# 通知设置
+notifications:
+  email:
+    enabled: true
+    subject_prefix: "[股票分析]"
+  
+  sns:
+    enabled: false
+    topic_arn: ""
+
+# 调度设置
+schedule:
+  market_open: "09:00"
+  market_close: "15:00"
+  timezone: "US/Eastern"
+
+# AWS设置
+aws:
+  region: "us-east-1"
+  ses_region: "us-east-1"

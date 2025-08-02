@@ -1,0 +1,46 @@
+service: stock-monitor
+
+provider:
+  name: aws
+  runtime: python3.9
+  region: us-east-1
+  memorySize: 512
+  timeout: 300
+  environment:
+    STAGE: ${opt:stage, 'dev'}
+    SES_REGION: ${env:SES_REGION, 'us-east-1'}
+    FROM_EMAIL: ${env:FROM_EMAIL}
+    TO_EMAIL: ${env:TO_EMAIL}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - ses:SendEmail
+        - ses:SendRawEmail
+        - sns:Publish
+        - ssm:GetParameter
+        - ssm:GetParameters
+        - logs:CreateLogGroup
+        - logs:CreateLogStream
+        - logs:PutLogEvents
+      Resource: "*"
+
+functions:
+  stockAnalyzer:
+    handler: src.lambda_function.lambda_handler
+    events:
+      - schedule:
+          rate: cron(0 9 * * MON-FRI)  # 每个工作日上午9点运行
+          enabled: true
+      - schedule:
+          rate: cron(0 15 * * MON-FRI)  # 每个工作日下午3点运行
+          enabled: true
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: non-linux
+    zip: true
+    slim: true
+    strip: false

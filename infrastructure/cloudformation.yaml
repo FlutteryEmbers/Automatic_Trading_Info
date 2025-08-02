@@ -1,0 +1,187 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Stock Monitor - CloudFormation Template'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: 'dev'
+    AllowedValues: ['dev', 'staging', 'prod']
+    Description: 'Environment name'
+  
+  FromEmail:
+    Type: String
+    Description: 'Sender email address (must be verified in SES)'
+    Default: 'your-email@example.com'
+  
+  ToEmail:
+    Type: String
+    Description: 'Recipient email address'
+    Default: 'recipient@example.com'
+  
+  ScheduleExpression:
+    Type: String
+    Default: 'cron(0 9,15 * * MON-FRI)'
+    Description: 'CloudWatch Events schedule expression'
+
+Resources:
+  # IAM Role for Lambda
+  StockMonitorLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub 'StockMonitorLambdaRole-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: 'StockMonitorPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'ses:SendEmail'
+                  - 'ses:SendRawEmail'
+                  - 'ses:GetIdentityVerificationAttributes'
+                Resource: '*'
+              - Effect: 'Allow'
+                Action:
+                  - 'sns:Publish'
+                  - 'sns:CreateTopic'
+                  - 'sns:Subscribe'
+                  - 'sns:ListSubscriptionsByTopic'
+                Resource: '*'
+              - Effect: 'Allow'
+                Action:
+                  - 'ssm:GetParameter'
+                  - 'ssm:GetParameters'
+                  - 'ssm:GetParametersByPath'
+                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/stock-monitor/*'
+              - Effect: 'Allow'
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
+
+  # Lambda Function
+  StockMonitorFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: !Sub 'stock-monitor-${Environment}'
+      Runtime: 'python3.9'
+      Handler: 'src.lambda_function.lambda_handler'
+      Role: !GetAtt StockMonitorLambdaRole.Arn
+      Code:
+        ZipFile: |
+          def lambda_handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': 'Function placeholder - deploy with actual code'
+              }
+      Timeout: 300
+      MemorySize: 512
+      Environment:
+        Variables:
+          STAGE: !Ref Environment
+          FROM_EMAIL: !Ref FromEmail
+          TO_EMAIL: !Ref ToEmail
+          SES_REGION: !Ref 'AWS::Region'
+
+  # CloudWatch Events Rule
+  StockMonitorScheduleRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: !Sub 'stock-monitor-schedule-${Environment}'
+      Description: 'Trigger stock monitor Lambda function'
+      ScheduleExpression: !Ref ScheduleExpression
+      State: 'ENABLED'
+      Targets:
+        - Arn: !GetAtt StockMonitorFunction.Arn
+          Id: 'StockMonitorTarget'
+
+  # Permission for CloudWatch Events to invoke Lambda
+  StockMonitorLambdaInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref StockMonitorFunction
+      Principal: 'events.amazonaws.com'
+      SourceArn: !GetAtt StockMonitorScheduleRule.Arn
+
+  # SNS Topic (Optional)
+  StockMonitorTopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      TopicName: !Sub 'stock-monitor-alerts-${Environment}'
+      DisplayName: 'Stock Monitor Alerts'
+
+  # SNS Subscription (Optional)
+  StockMonitorEmailSubscription:
+    Type: 'AWS::SNS::Subscription'
+    Properties:
+      TopicArn: !Ref StockMonitorTopic
+      Protocol: 'email'
+      Endpoint: !Ref ToEmail
+
+  # Systems Manager Parameters
+  FromEmailParameter:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub '/stock-monitor/${Environment}/from-email'
+      Type: 'String'
+      Value: !Ref FromEmail
+      Description: 'Sender email address'
+
+  ToEmailParameter:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub '/stock-monitor/${Environment}/to-email'
+      Type: 'String'
+      Value: !Ref ToEmail
+      Description: 'Recipient email address'
+
+  SNSTopicParameter:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub '/stock-monitor/${Environment}/sns-topic-arn'
+      Type: 'String'
+      Value: !Ref StockMonitorTopic
+      Description: 'SNS Topic ARN for alerts'
+
+  # CloudWatch Log Group
+  StockMonitorLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/stock-monitor-${Environment}'
+      RetentionInDays: 30
+
+Outputs:
+  LambdaFunctionArn:
+    Description: 'ARN of the Stock Monitor Lambda function'
+    Value: !GetAtt StockMonitorFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-LambdaFunctionArn'
+
+  SNSTopicArn:
+    Description: 'ARN of the SNS topic for alerts'
+    Value: !Ref StockMonitorTopic
+    Export:
+      Name: !Sub '${AWS::StackName}-SNSTopicArn'
+
+  ScheduleRuleArn:
+    Description: 'ARN of the CloudWatch Events rule'
+    Value: !GetAtt StockMonitorScheduleRule.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ScheduleRuleArn'
+
+  LogGroupName:
+    Description: 'Name of the CloudWatch Log Group'
+    Value: !Ref StockMonitorLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-LogGroupName'
