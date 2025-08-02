@@ -1,0 +1,60 @@
+# 股票监控列表
+stocks:
+  # 科技股
+  tech:
+    - symbol: "AAPL"
+      name: "Apple Inc."
+      weight: 0.2
+    - symbol: "MSFT"
+      name: "Microsoft Corporation"
+      weight: 0.2
+    - symbol: "GOOGL"
+      name: "Alphabet Inc."
+      weight: 0.15
+    - symbol: "AMZN"
+      name: "Amazon.com Inc."
+      weight: 0.15
+    - symbol: "TSLA"
+      name: "Tesla Inc."
+      weight: 0.1
+  
+  # 金融股
+  finance:
+    - symbol: "JPM"
+      name: "JPMorgan Chase & Co."
+      weight: 0.3
+    - symbol: "BAC"
+      name: "Bank of America Corp."
+      weight: 0.25
+    - symbol: "WFC"
+      name: "Wells Fargo & Company"
+      weight: 0.2
+    - symbol: "GS"
+      name: "Goldman Sachs Group Inc."
+      weight: 0.25
+  
+  # 指数ETF
+  etfs:
+    - symbol: "SPY"
+      name: "SPDR S&P 500 ETF Trust"
+      weight: 0.4
+    - symbol: "QQQ"
+      name: "Invesco QQQ Trust"
+      weight: 0.3
+    - symbol: "IWM"
+      name: "iShares Russell 2000 ETF"
+      weight: 0.3
+
+# 分析组合
+portfolios:
+  - name: "科技组合"
+    description: "科技股动量分析"
+    stocks: ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
+    
+  - name: "金融组合"
+    description: "金融股相关性分析"
+    stocks: ["JPM", "BAC", "WFC", "GS"]
+    
+  - name: "市场指数"
+    description: "主要市场指数监控"
+    stocks: ["SPY", "QQQ", "IWM"]
